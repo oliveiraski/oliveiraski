@@ -47,7 +47,15 @@ function metricas({ total, dias }) {
   while (i >= 0 && dias[i].n > 0) { atual++; i--; }
   const meses = new Map();
   for (const d of dias) { const k = d.data.slice(0, 7); meses.set(k, (meses.get(k) || 0) + d.n); }
-  const serie = [...meses.entries()].slice(-12);
+  // só meses fechados, no horário da Bahia (o Actions roda em UTC e já "vê" o mês seguinte);
+  // o mês corrente só entra no último dia, senão a linha despenca no fim.
+  const hoje = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bahia" }));
+  const amanha = new Date(hoje); amanha.setDate(hoje.getDate() + 1);
+  const ym = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const ultimoDia = ym(amanha) !== ym(hoje);
+  const serie = [...meses.entries()]
+    .filter(([k]) => k < ym(hoje) || (ultimoDia && k === ym(hoje)))
+    .slice(-12);
   const ativos = dias.filter((d) => d.n > 0).length;
   return { total, maior, atual, serie, ativos };
 }
